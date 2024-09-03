@@ -1,6 +1,8 @@
 #include "MainWindow.h"
 #include "file_service.h"
 
+#include <QDebug>
+
 MainWindow::MainWindow( QWidget *parent )
 	: QMainWindow( parent )
 {

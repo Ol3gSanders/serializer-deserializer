@@ -3,6 +3,7 @@
 #include "Deserializer.h"
 
 #include <sstream>
+#include <QDebug>
 
 SerDeserWgt::SerDeserWgt()
 {
@@ -36,23 +37,39 @@ void SerDeserWgt::init()
 
 std::string SerDeserWgt::serialize()
 {
-	data = widgetsToData();
+	widgetsToData();
 
-	Serializer ser;
-	ser.save( data.x );
-	ser.save( data.y );
-	ser.save( data.text );
+	std::string savedData;
 
-	std::string savedData = ser.getData();
+	std::string x( reinterpret_cast<const char*>( &data.x ), sizeof ( data.x ) );
+	std::string y( reinterpret_cast<const char*>( &data.y ), sizeof ( data.y ) );
+
+	uint32_t strNBytes = data.text.size();
+	std::string textStrSize( reinterpret_cast<const char*>( &strNBytes ), sizeof ( strNBytes ) );
+
+	savedData = x + y + textStrSize +  data.text;
 	return savedData;
 }
 
 void SerDeserWgt::deserialize( const std::string &str )
 {
-	Deserializer deser( str );
-	data.x = deser.load<int>();
-	data.y = deser.load<double>();
-	data.text = deser.load();
+	unsigned pos = 0;
+
+	std::string xStr = str.substr( pos, sizeof ( data.x ) );
+	memcpy( reinterpret_cast<char*>( &data.x ), xStr.c_str(), sizeof ( data.x ) );
+	pos += sizeof ( data.x );
+
+	std::string yStr = str.substr( pos, sizeof ( data.y ) );
+	memcpy( reinterpret_cast<char*>( &data.y ), yStr.c_str(), sizeof ( data.y ) );
+	pos += sizeof ( data.y );
+
+	uint32_t strNBytes;
+	std::string textStrSize = str.substr( pos, sizeof ( strNBytes ) );
+	memcpy( reinterpret_cast<char*>( &strNBytes ), textStrSize.c_str(), sizeof ( strNBytes ) );
+	pos += sizeof ( uint32_t );
+
+	std::string textStr = str.substr( pos, strNBytes );
+	data.text = textStr;
 
 	dataToWidgets( data );
 }
